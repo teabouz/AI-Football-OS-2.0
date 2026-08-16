@@ -2,7 +2,13 @@ import asyncio
 import httpx
 import config
 
+
 async def main():
+    if not config.PAYSTACK_SECRET_KEY:
+        print("PAYSTACK_SECRET_KEY is not configured.")
+        print("This is a manual Paystack smoke test and requires a Paystack API key.")
+        return
+
     headers = {
         "Authorization": f"Bearer {config.PAYSTACK_SECRET_KEY}",
         "Content-Type": "application/json",
@@ -33,4 +39,6 @@ async def main():
     print("PAYSTACK RESPONSE:")
     print(response.text)
 
-asyncio.run(main())
+
+if __name__ == "__main__":
+    asyncio.run(main())
