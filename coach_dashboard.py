@@ -19,7 +19,7 @@ Run:
     python coach_dashboard.py
 Then in the bot, a coach/academy account runs /dashboard to get a login link.
 """
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from functools import wraps
 
 from flask import Flask, request, session as flask_session, redirect, url_for, render_template_string
@@ -159,7 +159,7 @@ def login():
     session = SessionLocal()
     try:
         record = session.query(DashboardToken).filter_by(token=token).first()
-        if not record or record.used or record.expires_at < datetime.utcnow():
+        if not record or record.used or record.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
             return render(
                 "Login", '<div class="card error">This link is invalid or has expired. '
                 'Go back to Telegram and run /dashboard for a new one.</div>'
@@ -1186,7 +1186,7 @@ def scouting_prospect_detail(prospect_id):
             prospect.notes = request.form.get("notes", "").strip() or None
             prospect.status = ProspectStatus(request.form.get("status", "watching"))
             prospect.manual_rating = int(request.form["manual_rating"]) if request.form.get("manual_rating") else None
-            prospect.updated_at = datetime.utcnow()
+            prospect.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
             if request.form.get("generate_assessment"):
                 if _client is None:
                     prospect.ai_assessment = "(AI not configured — set ANTHROPIC_API_KEY.)"
@@ -1377,7 +1377,7 @@ def marketplace_opportunity_detail(opportunity_id):
                 application = session.query(OpportunityApplication).filter_by(id=app_id, opportunity_id=opp.id).first()
                 if application:
                     application.status = ApplicationStatus(new_status)
-                    application.reviewed_at = datetime.utcnow()
+                    application.reviewed_at = datetime.now(timezone.utc).replace(tzinfo=None)
                     session.commit()
                     applicant = session.query(User).filter_by(id=application.applicant_user_id).first()
                     if applicant:

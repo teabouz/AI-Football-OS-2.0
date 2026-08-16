@@ -7,7 +7,7 @@ built-in default font if no TrueType font is found on the host, so this
 works out of the box on a bare server).
 """
 import io
-from datetime import datetime
+from datetime import datetime, timezone
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -35,7 +35,7 @@ def _load_font(size: int, bold: bool = False):
 
 def generate_certificate_png(player_name: str, course_title: str, certificate_code: str,
                               issued_at: datetime = None) -> bytes:
-    issued_at = issued_at or datetime.utcnow()
+    issued_at = issued_at or datetime.now(timezone.utc).replace(tzinfo=None)
     img = Image.new("RGB", (WIDTH, HEIGHT), BG_COLOR)
     draw = ImageDraw.Draw(img)
 

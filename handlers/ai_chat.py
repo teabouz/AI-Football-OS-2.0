@@ -6,7 +6,7 @@ on day one, and is Tom's own established pattern from the AI Academy app).
 Enforces the daily free-tier question quota, keeps a short rolling chat
 history per user for context, and calls Claude via the Anthropic SDK.
 """
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -117,7 +117,7 @@ async def handle_free_text(update: Update, context: ContextTypes.DEFAULT_TYPE, q
 
         if not user.is_premium():
             user.daily_question_count += 1
-        user.last_active_at = datetime.utcnow()
+        user.last_active_at = datetime.now(timezone.utc).replace(tzinfo=None)
         session.commit()
 
         await update.message.reply_text(answer)

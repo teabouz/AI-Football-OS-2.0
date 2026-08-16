@@ -5,7 +5,7 @@ the "I've Paid" refresh button) lives in handlers/payments.py — this file
 just exposes mark_user_premium(), the one function that flow calls once a
 payment is confirmed (also reusable by the webhook in payment_server.py).
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -93,7 +93,7 @@ def mark_user_premium(session, user: User, days: int = 30) -> None:
     # first-time upgrade sees itself as "already premium" with a None expiry
     # and crashes on `None + timedelta(...)`.
     was_already_premium = user.is_premium()
-    base = user.subscription_expires_at if was_already_premium else datetime.utcnow()
+    base = user.subscription_expires_at if was_already_premium else datetime.now(timezone.utc).replace(tzinfo=None)
     user.subscription_tier = SubscriptionTier.PREMIUM
     user.subscription_expires_at = base + timedelta(days=days)
     session.commit()

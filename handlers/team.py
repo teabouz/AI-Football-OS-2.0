@@ -11,7 +11,7 @@ full web Coach Dashboard (coach_dashboard.py) without a separate login.
 """
 import logging
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
@@ -221,7 +221,7 @@ async def dashboard_command(update: Update, context: ContextTypes.DEFAULT_TYPE, 
         session.add(DashboardToken(
             user_id=user.id,
             token=token,
-            expires_at=datetime.utcnow() + timedelta(minutes=config.DASHBOARD_TOKEN_TTL_MINUTES),
+            expires_at=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=config.DASHBOARD_TOKEN_TTL_MINUTES),
         ))
         session.commit()
 

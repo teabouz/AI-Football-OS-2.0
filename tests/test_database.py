@@ -38,9 +38,9 @@ def test_duplicate_payment_reference_rejected(db_session, make_user):
 
 def test_duplicate_dashboard_token_rejected(db_session, make_user):
     from models import DashboardToken
-    from datetime import datetime, timedelta
+    from datetime import datetime, timedelta, timezone
     user = make_user(telegram_id=2002)
-    exp = datetime.utcnow() + timedelta(minutes=15)
+    exp = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=15)
     db_session.add(DashboardToken(user_id=user.id, token="tok-1", expires_at=exp))
     db_session.commit()
     db_session.add(DashboardToken(user_id=user.id, token="tok-1", expires_at=exp))

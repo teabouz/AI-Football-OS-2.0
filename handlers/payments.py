@@ -162,7 +162,7 @@ async def refresh_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if data.get("status") == "success":
             from datetime import datetime
             payment.status = PaymentStatus.SUCCESS
-            payment.verified_at = datetime.utcnow()
+            payment.verified_at = datetime.now(timezone.utc).replace(tzinfo=None)
             user = session.query(User).filter_by(id=payment.user_id).first()
             mark_user_premium(session, user, days=config.PREMIUM_DURATION_DAYS)
             await query.edit_message_text(

@@ -4,7 +4,7 @@ Goal Tracking + Weekly/Monthly/Season Objectives — Phase 2.
 /addgoal <title> starts a short flow to pick a timeframe, then saves it.
 The goals list shows active goals with a "Mark Done" button per goal.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -127,7 +127,7 @@ async def mark_goal_done(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await query.answer("Marked as done! 🎉")
         goal.status = GoalStatus.COMPLETED
-        goal.completed_at = datetime.utcnow()
+        goal.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         session.commit()
         # Re-render the list
         await list_goals(update, context)

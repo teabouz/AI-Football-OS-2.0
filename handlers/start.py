@@ -8,7 +8,7 @@ Flow:
          -> if already registered: /start just shows the main menu
 """
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from telegram import Update
 from telegram.ext import (
@@ -51,7 +51,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     session = SessionLocal()
     try:
         user = get_or_create_user(session, update.effective_user)
-        user.last_active_at = datetime.utcnow()
+        user.last_active_at = datetime.now(timezone.utc).replace(tzinfo=None)
         session.commit()
 
         if user.registration_complete:

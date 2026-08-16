@@ -15,7 +15,7 @@ the certificate.
 import json
 import re
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 
 from anthropic import Anthropic, APIError
 
@@ -167,7 +167,7 @@ async def _generate_lesson(session, lesson: Lesson) -> bool:
             if data and _validate_lesson_json(data):
                 lesson.content_text = data["content"]
                 lesson.quiz_json = json.dumps(data["quiz"])
-                lesson.generated_at = datetime.utcnow()
+                lesson.generated_at = datetime.now(timezone.utc).replace(tzinfo=None)
                 session.commit()
                 return True
         except APIError:
@@ -274,7 +274,7 @@ async def answer_quiz(update: Update, context: ContextTypes.DEFAULT_TYPE, select
         existing = session.query(LessonProgress).filter_by(user_id=user.id, lesson_id=lesson_id).first()
         if existing:
             existing.quiz_score, existing.quiz_total = score, total
-            existing.completed_at = datetime.utcnow()
+            existing.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
         else:
             session.add(LessonProgress(user_id=user.id, lesson_id=lesson_id, quiz_score=score, quiz_total=total))
         session.commit()

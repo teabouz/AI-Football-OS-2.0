@@ -6,7 +6,7 @@ Match Analyst, Scouting, Marketplace, etc.) can add new tables that hang off
 User / PlayerProfile without needing a rewrite.
 """
 import enum
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 
 from sqlalchemy import (
     Column, Integer, BigInteger, String, DateTime, Date, Boolean, Text,
@@ -162,8 +162,8 @@ class User(Base):
     # --- Phase 2: which AI Coach persona this user currently has active ---
     active_coach_mode = Column(Enum(CoachMode), default=CoachMode.GENERAL, nullable=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    last_active_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
+    last_active_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     player_profile = relationship("PlayerProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     coach_profile = relationship("CoachProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
@@ -184,7 +184,7 @@ class User(Base):
     def is_premium(self) -> bool:
         if self.subscription_tier != SubscriptionTier.PREMIUM:
             return False
-        if self.subscription_expires_at and self.subscription_expires_at < datetime.utcnow():
+        if self.subscription_expires_at and self.subscription_expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
             return False
         return True
 
@@ -249,7 +249,7 @@ class ChatMessage(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     role = Column(String(16), nullable=False)   # "user" | "assistant"
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     user = relationship("User", back_populates="messages")
 
@@ -271,7 +271,7 @@ class Goal(Base):
     target_date = Column(Date, nullable=True)
     status = Column(Enum(GoalStatus), default=GoalStatus.ACTIVE, nullable=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
     completed_at = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="goals")
@@ -293,7 +293,7 @@ class DailyCheckin(Base):
     mood = Column(Integer, nullable=True)  # 1 (rough day) - 5 (great day)
     notes = Column(Text, nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     user = relationship("User", back_populates="checkins")
 
@@ -307,7 +307,7 @@ class DevelopmentPlan(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     plan_text = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     user = relationship("User", back_populates="development_plans")
 
@@ -323,7 +323,7 @@ class PerformanceReport(Base):
     period_start = Column(Date, nullable=False)
     period_end = Column(Date, nullable=False)
     report_text = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     user = relationship("User", back_populates="performance_reports")
 
@@ -341,7 +341,7 @@ class Payment(Base):
     currency = Column(String(8), default="NGN", nullable=False)
     status = Column(Enum(PaymentStatus), default=PaymentStatus.PENDING, nullable=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
     verified_at = Column(DateTime, nullable=True)
 
     user = relationship("User", back_populates="payments")
@@ -359,7 +359,7 @@ class Team(Base):
     id = Column(Integer, primary_key=True)
     owner_user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
     name = Column(String(128), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     owner = relationship("User", back_populates="owned_team")
     members = relationship("TeamMembership", back_populates="team", cascade="all, delete-orphan")
@@ -388,7 +388,7 @@ class TeamMembership(Base):
     guest_name = Column(String(128), nullable=True)
 
     active = Column(Boolean, default=True, nullable=False)
-    joined_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    joined_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     team = relationship("Team", back_populates="members")
     player_user = relationship("User")
@@ -419,7 +419,7 @@ class TrainingSession(Base):
     evaluation_rating = Column(Integer, nullable=True)  # 1-5
     evaluation_notes = Column(Text, nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     team = relationship("Team", back_populates="training_sessions")
     attendance_records = relationship("AttendanceRecord", back_populates="session", cascade="all, delete-orphan")
@@ -432,7 +432,7 @@ class AttendanceRecord(Base):
     session_id = Column(Integer, ForeignKey("training_sessions.id"), nullable=False)
     membership_id = Column(Integer, ForeignKey("team_memberships.id"), nullable=False)
     present = Column(Boolean, default=False, nullable=False)
-    marked_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    marked_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     session = relationship("TrainingSession", back_populates="attendance_records")
     membership = relationship("TeamMembership", back_populates="attendance_records")
@@ -447,7 +447,7 @@ class PlayerNote(Base):
     membership_id = Column(Integer, ForeignKey("team_memberships.id"), nullable=False)
     author_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     note_text = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     membership = relationship("TeamMembership", back_populates="notes")
 
@@ -462,7 +462,7 @@ class MedicalRecord(Base):
     status = Column(Enum(MedicalStatus), default=MedicalStatus.FIT, nullable=False)
     description = Column(Text, nullable=True)
     expected_return_date = Column(Date, nullable=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
     updated_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     membership = relationship("TeamMembership", back_populates="medical_records")
@@ -484,7 +484,7 @@ class MatchReport(Base):
     notes = Column(Text, nullable=True)
     tactical_summary = Column(Text, nullable=True)         # AI-written, from formation + key_moments + notes
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
     created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     team = relationship("Team", back_populates="match_reports")
@@ -505,7 +505,7 @@ class FinanceEntry(Base):
     description = Column(String(255), nullable=True)
     entry_date = Column(Date, default=date.today, nullable=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
     created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     team = relationship("Team", back_populates="finance_entries")
@@ -521,7 +521,7 @@ class EquipmentItem(Base):
     quantity = Column(Integer, default=1, nullable=False)
     condition = Column(Enum(EquipmentCondition), default=EquipmentCondition.GOOD, nullable=False)
     notes = Column(String(255), nullable=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     team = relationship("Team", back_populates="equipment_items")
 
@@ -536,7 +536,7 @@ class DashboardToken(Base):
     token = Column(String(64), unique=True, nullable=False, index=True)
     expires_at = Column(DateTime, nullable=False)
     used = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     user = relationship("User", back_populates="dashboard_tokens")
 
@@ -561,7 +561,7 @@ class VideoAnalysis(Base):
     frame_count = Column(Integer, nullable=True)
     analysis_text = Column(Text, nullable=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     user = relationship("User", back_populates="video_analyses")
 
@@ -584,7 +584,7 @@ class PlayerScoutingReport(Base):
     report_text = Column(Text, nullable=False)
     potential_rating = Column(Integer, nullable=True)  # 1-10, coach-input-derived, not a scientific score
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
     created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     membership = relationship("TeamMembership", back_populates="scouting_reports")
@@ -609,8 +609,8 @@ class ScoutingProspect(Base):
     status = Column(Enum(ProspectStatus), default=ProspectStatus.WATCHING, nullable=False)
     ai_assessment = Column(Text, nullable=True)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
     created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     team = relationship("Team", back_populates="scouting_prospects")
@@ -667,7 +667,7 @@ class LessonProgress(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     lesson_id = Column(Integer, ForeignKey("lessons.id"), nullable=False)
 
-    completed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    completed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
     quiz_score = Column(Integer, nullable=True)
     quiz_total = Column(Integer, nullable=True)
 
@@ -688,7 +688,7 @@ class Certificate(Base):
     course_id = Column(Integer, ForeignKey("courses.id"), nullable=False)
 
     certificate_code = Column(String(32), unique=True, nullable=False, index=True)
-    issued_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    issued_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     user = relationship("User", back_populates="certificates")
     course = relationship("Course", back_populates="certificates")
@@ -721,7 +721,7 @@ class Opportunity(Base):
     deadline = Column(Date, nullable=True)
     status = Column(Enum(ListingStatus), default=ListingStatus.OPEN, nullable=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     team = relationship("Team", back_populates="opportunities")
     applications = relationship("OpportunityApplication", back_populates="opportunity", cascade="all, delete-orphan")
@@ -740,7 +740,7 @@ class OpportunityApplication(Base):
     note = Column(Text, nullable=True)
     status = Column(Enum(ApplicationStatus), default=ApplicationStatus.PENDING, nullable=False)
 
-    applied_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    applied_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
     reviewed_at = Column(DateTime, nullable=True)
 
     opportunity = relationship("Opportunity", back_populates="applications")
@@ -763,7 +763,7 @@ class EquipmentListing(Base):
     price_kobo = Column(Integer, nullable=True)  # null = free / open to trade
     status = Column(Enum(EquipmentListingStatus), default=EquipmentListingStatus.AVAILABLE, nullable=False)
 
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     team = relationship("Team", back_populates="equipment_listings")
     interests = relationship("EquipmentInterest", back_populates="listing", cascade="all, delete-orphan")
@@ -778,6 +778,6 @@ class EquipmentInterest(Base):
     interested_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     message = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False)
 
     listing = relationship("EquipmentListing", back_populates="interests")

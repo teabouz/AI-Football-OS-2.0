@@ -16,7 +16,7 @@ Flask's test client, covering the magic-link token lifecycle end to end:
     guessed
 """
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from database import init_db, SessionLocal
 from models import User, UserRole, Team, DashboardToken
@@ -44,7 +44,7 @@ team_b = Team(owner_user_id=coach_b.id, name="Bob United")
 session.add_all([team_a, team_b])
 session.commit()
 
-now = datetime.utcnow()
+now = datetime.now(timezone.utc).replace(tzinfo=None)
 valid_token = DashboardToken(user_id=coach_a.id, token="valid-token-aaa", expires_at=now + timedelta(minutes=15))
 expired_token = DashboardToken(user_id=coach_a.id, token="expired-token-bbb", expires_at=now - timedelta(minutes=1))
 used_token = DashboardToken(user_id=coach_a.id, token="used-token-ccc", expires_at=now + timedelta(minutes=15), used=True)
