@@ -1,7 +1,7 @@
 import asyncio
 import httpx
 import config
-
+from payments import paystack
 
 async def main():
     if not config.PAYSTACK_SECRET_KEY:
@@ -17,7 +17,7 @@ async def main():
     payload = {
         "email": "test@example.com",
         "amount": 10000,
-        "reference": "AIOS_TEST_002",
+        "reference": paystack.new_reference(telegram_id=999999),    
         "currency": "NGN",
         "callback_url": f"{config.PUBLIC_BASE_URL}/paystack/callback",
     }
