@@ -10,6 +10,7 @@ Phase 2 payment flow.
                                b) user taps "✅ I've Paid" -> we verify directly
 """
 import logging
+from datetime import datetime, timezone
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -160,7 +161,6 @@ async def refresh_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         data = result.get("data", {})
         if data.get("status") == "success":
-            from datetime import datetime
             payment.status = PaymentStatus.SUCCESS
             payment.verified_at = datetime.now(timezone.utc).replace(tzinfo=None)
             user = session.query(User).filter_by(id=payment.user_id).first()

@@ -7,6 +7,7 @@ import hashlib
 import hmac
 
 import pytest
+from sqlalchemy.orm import sessionmaker
 
 
 @pytest.fixture(autouse=True)
@@ -74,3 +75,74 @@ def test_payment_ownership_enforced_in_refresh_status(db_session, make_user):
     # Mirrors the ownership check in handlers/payments.py:refresh_status
     looked_up = db_session.query(Payment).filter_by(reference="tg7001_secret").first()
     assert looked_up.user_id != attacker.id, "attacker must not be treated as the payment owner"
+
+@pytest.mark.asyncio
+async def test_successful_payment_refresh_activates_premium(
+    db_session, make_user, monkeypatch
+):
+    """Successful Paystack verification must mark the payment successful
+    and activate the user's Premium subscription.
+    """
+    from models import Payment, PaymentStatus, SubscriptionTier
+    from handlers import payments as payment_handler
+
+    user = make_user(telegram_id=9001)
+
+    payment = Payment(
+        user_id=user.id,
+        reference="tg9001_regression",
+        amount_kobo=500000,
+        currency="NGN",
+        status=PaymentStatus.PENDING,
+    )
+    db_session.add(payment)
+    db_session.commit()
+
+    class FakeCallbackQuery:
+        data = "pay:refresh:tg9001_regression"
+
+        async def answer(self, *args, **kwargs):
+            pass
+
+        async def edit_message_text(self, *args, **kwargs):
+            pass
+
+    class FakeTelegramUser:
+        id = 9001
+
+    class FakeUpdate:
+        callback_query = FakeCallbackQuery()
+        effective_user = FakeTelegramUser()
+
+    async def fake_verify_transaction(reference):
+        assert reference == "tg9001_regression"
+        return {
+            "status": True,
+            "message": "Verification successful",
+            "data": {
+                "status": "success",
+                "reference": reference,
+                "amount": 500000,
+                "currency": "NGN",
+            },
+        }
+
+    monkeypatch.setattr(
+        payment_handler.paystack,
+        "verify_transaction",
+        fake_verify_transaction,
+    )
+
+
+    HandlerSession = sessionmaker(bind=db_session.get_bind())
+    monkeypatch.setattr(payment_handler, "SessionLocal", HandlerSession)
+
+    await payment_handler.refresh_status(FakeUpdate(), None)
+
+    db_session.refresh(user)
+    db_session.refresh(payment)
+
+    assert payment.status == PaymentStatus.SUCCESS
+    assert payment.verified_at is not None
+    assert user.subscription_tier == SubscriptionTier.PREMIUM
+    assert user.subscription_expires_at is not None
