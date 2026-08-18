@@ -53,6 +53,20 @@ async def upgrade_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text("Send /start first to set up your profile.")
             return ConversationHandler.END
 
+        if user.is_premium():
+            expiry = (
+                user.subscription_expires_at.strftime("%d %b %Y")
+                if user.subscription_expires_at
+                else "—"
+            )
+            await query.edit_message_text(
+                f"⭐ You're already Premium!\n\n"
+                f"Your subscription expires: {expiry}\n\n"
+                "You already have access to all Premium Coaching features.",
+                reply_markup=keyboards.back_to_menu_keyboard(),
+            )
+            return ConversationHandler.END
+
         if user.email:
             await _create_and_send_payment_link(query.message, context, user.id, user.email)
             return ConversationHandler.END

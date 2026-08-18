@@ -50,7 +50,11 @@ async def show_subscription(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"Price: ₦{config.PREMIUM_MONTHLY_PRICE_NGN}/month"
             )
 
-        markup = keyboards.subscription_keyboard()
+        if user and user.is_premium():
+            markup = keyboards.back_to_menu_keyboard()
+        else:
+            markup = keyboards.subscription_keyboard()
+
         if query:
             await query.edit_message_text(text, parse_mode="Markdown", reply_markup=markup)
         else:
