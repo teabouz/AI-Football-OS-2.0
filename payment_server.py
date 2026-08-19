@@ -14,6 +14,7 @@ Then either:
 
 Both paths call the same subscription.mark_user_premium().
 """
+import json
 import logging
 from datetime import datetime, timezone
 
@@ -40,10 +41,14 @@ def paystack_webhook():
         logger.warning("Rejected webhook with invalid signature")
         return jsonify({"status": "invalid signature"}), 401
 
-    event = request.get_json(silent=True) or {}
+    try:
+        event = json.loads(raw_body.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        logger.warning("Rejected webhook with invalid JSON")
+        return jsonify({"status": "invalid JSON"}), 400
+
     if event.get("event") != "charge.success":
         return jsonify({"status": "ignored"}), 200
-
     reference = event.get("data", {}).get("reference")
     if not reference:
         return jsonify({"status": "no reference"}), 400
