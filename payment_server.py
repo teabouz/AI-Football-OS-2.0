@@ -49,36 +49,112 @@ def paystack_webhook():
 
     if event.get("event") != "charge.success":
         return jsonify({"status": "ignored"}), 200
+
     reference = event.get("data", {}).get("reference")
     if not reference:
         return jsonify({"status": "no reference"}), 400
 
-    # Defense in depth: don't just trust the webhook payload — re-verify
-    # directly with Paystack's API before crediting the account.
+    # Defense in depth: do not trust the webhook payload alone.
+    # Re-verify the transaction directly with Paystack before
+    # crediting the account.
     try:
         result = paystack.verify_transaction_sync(reference)
     except Exception:
         logger.exception("Failed to verify transaction %s", reference)
         return jsonify({"status": "verify failed"}), 502
 
-    if result.get("data", {}).get("status") != "success":
+    transaction = result.get("data", {})
+
+    if transaction.get("status") != "success":
         return jsonify({"status": "not successful"}), 200
 
     session = SessionLocal()
     try:
-        payment = session.query(Payment).filter_by(reference=reference).first()
+        payment = session.query(Payment).filter_by(
+            reference=reference
+        ).first()
+
         if not payment:
-            logger.warning("Webhook for unknown reference %s", reference)
+            logger.warning(
+                "Webhook for unknown reference %s",
+                reference,
+            )
             return jsonify({"status": "unknown reference"}), 404
+
+        # ---------------------------------------------------------
+        # TRANSACTION INTEGRITY CHECKS
+        # ---------------------------------------------------------
+        # The authoritative Paystack transaction must exactly match
+        # the locally-created Payment record before Premium access
+        # can be granted.
+
+        verified_reference = transaction.get("reference")
+        verified_amount = transaction.get("amount")
+        verified_currency = transaction.get("currency")
+
+        if verified_reference != payment.reference:
+            logger.warning(
+                "Webhook reference mismatch: local=%s paystack=%s",
+                payment.reference,
+                verified_reference,
+            )
+            return jsonify({"status": "reference mismatch"}), 200
+
+        if verified_amount != payment.amount_kobo:
+            logger.warning(
+                "Webhook amount mismatch for %s: local=%s paystack=%s",
+                reference,
+                payment.amount_kobo,
+                verified_amount,
+            )
+            return jsonify({"status": "amount mismatch"}), 200
+
+        if str(verified_currency).upper() != str(payment.currency).upper():
+            logger.warning(
+                "Webhook currency mismatch for %s: local=%s paystack=%s",
+                reference,
+                payment.currency,
+                verified_currency,
+            )
+            return jsonify({"status": "currency mismatch"}), 200
+
+        # ---------------------------------------------------------
+        # PAYMENT ACCEPTED — ACTIVATE PREMIUM
+        # ---------------------------------------------------------
 
         if payment.status != PaymentStatus.SUCCESS:
             payment.status = PaymentStatus.SUCCESS
-            payment.verified_at = datetime.now(timezone.utc).replace(tzinfo=None)
-            user = session.query(User).filter_by(id=payment.user_id).first()
-            mark_user_premium(session, user, days=config.PREMIUM_DURATION_DAYS)
-            logger.info("Upgraded user %s to Premium via webhook (ref %s)", user.telegram_id, reference)
+            payment.verified_at = datetime.now(
+                timezone.utc
+            ).replace(tzinfo=None)
+
+            user = session.query(User).filter_by(
+                id=payment.user_id
+            ).first()
+
+            if not user:
+                logger.error(
+                    "Payment %s references missing user_id=%s",
+                    reference,
+                    payment.user_id,
+                )
+                session.rollback()
+                return jsonify({"status": "user not found"}), 404
+
+            mark_user_premium(
+                session,
+                user,
+                days=config.PREMIUM_DURATION_DAYS,
+            )
+
+            logger.info(
+                "Upgraded user %s to Premium via webhook (ref %s)",
+                user.telegram_id,
+                reference,
+            )
 
         return jsonify({"status": "ok"}), 200
+
     finally:
         session.close()
 
